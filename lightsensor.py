@@ -5,11 +5,13 @@ import signal
 import sys
 import time
 import logging
+from threading import Thread
 
 logging.basicConfig(level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S', format='%(asctime)-15s - [%(levelname)s] %(module)s: %(message)s', )
 parser = argparse.ArgumentParser(description='Check for movement on a PIR if no daylight is present on light sensor')
 parser.add_argument('-p', dest='pir', type=int, default=16, help="PIR data pin (Default: 16)")
 parser.add_argument('-s', dest='sensor', type=int, default=21, help="Light Sensor data pin (Default: 21)")
+parser.add_argument('-l', dest='lightOnPeriod', type=int, default=15, help="How long to put the light on when movement is detected (Default:15)")
 args = parser.parse_args()
 
 loopCount=3
@@ -33,11 +35,27 @@ def goneLight(o):
 def weGotMovement(o):
     logging.info("Detected Movement")
     if itIsLight == 0:
+        """
+        We want to turn the lights on , but not forever, we want a delay in munites
+        this delay is determined by the argument lightOnPeriod.
+        """
         logging.info("We need some light over here!!!!")
     else:
-        logging.info("No need for the lights, daylight is availabel")
+        logging.info("No need for the lights, daylight is available")
 
 
+
+def dummy_task():
+    """
+     A function that soed nothing to allow us to set up a thread 
+     as a timer
+     e.g. we turn the lights on when we get movement fr 10 minuts so we set a threa 
+     running this empty function for 10 minutes then iot returns to the program
+
+     see http://stackoverflow.com/questions/2831775/running-a-python-script-for-a-user-specified-amount-of-time
+     """
+    while true:
+        pass
 try:
     import RPi.GPIO as GPIO
     import time

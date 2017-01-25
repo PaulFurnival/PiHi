@@ -7,33 +7,45 @@ import time
 import logging
 from PiHiController import PiHiController
 from threading import Thread
+import datetime
+import RPi.GPIO as GPIO
 
-logging.basicConfig(level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S', format='%(asctime)-15s - [%(levelname)s] %(module)s: %(message)s', )
+GPIO.setmode(GPIO.BCM)
+
+fname = "/var/log/PiHi/PiHilog_" + datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")+ ".log"
+logging.basicConfig(filename=fname, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S', format='%(asctime)-15s - [%(levelname)s] %(module)s: %(message)s', )
 parser = argparse.ArgumentParser(description='Check for movement on a PIR if no daylight is present on light sensor')
 parser.add_argument('-p', dest='pir', type=int, default=20, help="PIR data pin (Default: 20)")
 parser.add_argument('-s', dest='sensor', type=int, default=21, help="Light Sensor data pin (Default: 21)")
 parser.add_argument('-l', dest='lightOnPeriod', type=int, default=15, help="How long to put the light on when movement is detected (Default:15)")
+parser.add_argument('-1', dest='relay1', type=int, default=22, help="GPIO Pin for Relay 1 (Default:22)")
+parser.add_argument('-2', dest='relay2', type=int, default=23, help="GPIO Pin for Relay 1 (Default:23)")
+parser.add_argument('-3', dest='relay3', type=int, default=24, help="GPIO Pin for Relay 1 (Default:24)")
+parser.add_argument('-4', dest='relay4', type=int, default=25, help="GPIO Pin for Relay 1 (Default:25)")
 args = parser.parse_args()
 
 loopCount=3
 itIsLight=0
 sleepTime=2
 sensor=args.sensor
+GPIO.setup(args.relay1,GPIO.OUT, initial=1)
+GPIO.setup(args.relay2,GPIO.OUT, initial=1)
+GPIO.setup(args.relay3,GPIO.OUT, initial=1)
+GPIO.setup(args.relay4,GPIO.OUT, initial=1)
 pir=args.pir
 
 PHC = PiHiController(args)
 PHC.check()
 
+print("\n\n\nLogging to " + fname + "\n\n\n")
+
 def goneLight(o):
     global itIsLight
-    print("Lighting changed to light",GPIO.input(o))
     if GPIO.input(o) == 0 and itIsLight == 0:
         logging.info("Light Level has changed to  [ ON  ]")
         itIsLight=1
-        #GPIO.output(relay,GPIO.HIGH)
     else:
         logging.info("Light Level has changed to  [ OFF  ]")
-        #GPIO.output(relay,GPIO.LOW)
         itIsLight=0
 
 def weGotMovement(o):
@@ -44,8 +56,14 @@ def weGotMovement(o):
         this delay is determined by the argument lightOnPeriod.
         """
         logging.info("We need some light over here!!!!")
+        GPIO.output(args.relay1,0)
+        logging.info("Relay ono for 3 seconds")
+        time.sleep(2)
+        GPIO.output(args.relay1,1)
+        logging.info("Relay off")
     else:
         logging.info("No need for the lights, daylight is available")
+        GPIO.output(args.relay1,GPIO.LOW)
 
 
 
@@ -65,7 +83,7 @@ try:
     import time
     logging.info("using package version"+str(GPIO.VERSION))
     GPIO.setmode(GPIO.BCM)
-    #GPIO.setup(relay,GPIO.OUT)                              #This is the LED
+    GPIO.setup(args.relay1,GPIO.OUT)                              #This is the LED
     GPIO.setup(sensor, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(pir, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.add_event_detect(sensor,GPIO.RISING,callback=goneLight, bouncetime=500)
